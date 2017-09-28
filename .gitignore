@@ -1,0 +1,7 @@
+*.out
+*.png
+*.pnm
+*.a
+leptonic
+.atom
+.idea

@@ -40,19 +40,8 @@ typedef struct vospi_segment {
  */
 void transfer_segment(int fd, vospi_segment_t* segment)
 {
-	// Create the spidev message
-	struct spi_ioc_transfer tr = {
-		.tx_buf = (unsigned long){0, },
-		.rx_buf = (unsigned long)(segment->packets[0].symbols),
-		.len = VOSPI_PACKET_BYTES,
-		.delay_usecs = 0,
-		.speed_hz = speed,
-		.bits_per_word = bits,
-		.cs_change = 1
-	};
-
 	// Perform the spidev transfer
-	int ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	int ret = read(fd, &segment->packets[0].symbols, VOSPI_PACKET_BYTES);
 	if (ret < 1) {
 		perror("SPI: failed to transfer packet");
 		exit(-5);
@@ -60,13 +49,12 @@ void transfer_segment(int fd, vospi_segment_t* segment)
 
 	while (segment->packets[0].symbols[0] & 0xf0 == 0xf0) {
 		// It was a discard packet, try receiving another packet into the same buf
-		ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+		printf("Discard...");
+        read(fd, &segment->packets[0].symbols, VOSPI_PACKET_BYTES);
 	}
 
 	// Read the remaining packets
-	tr.rx_buf = (unsigned long)(segment->packets[1]);
-	tr.len = VOSPI_PACKET_BYTES * (VOSPI_PACKETS_PER_SEGMENT - 1);
-	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	ret = read(fd, &segment->packets[1].symbols, VOSPI_PACKET_BYTES * (VOSPI_PACKETS_PER_SEGMENT - 1));
 	if (ret < 1) {
 		perror("SPI: failed to transfer the rest of the segment");
 		exit(-5);
@@ -115,7 +103,7 @@ int main(int argc, char *argv[])
 	printf("TTT: %d\n", (segments[0]->packets[20].symbols[0] >> 4) & 0x0f);
 	while (((segments[0]->packets[20].symbols[0] >> 4) & 0x0f) != 1) {
 		printf("TTT: %d\n", (segments[0]->packets[20].symbols[0] >> 4) & 0x0f);
-		usleep(200000);
+		usleep(2000000);
 		transfer_segment(fd, segments[0]);
 	}
 
