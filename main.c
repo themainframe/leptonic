@@ -63,11 +63,13 @@ void transfer_segment(int fd, vospi_segment_t* segment)
 		ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	}
 
-	// We've got a valid packet, read the rest
-	for (int i = 1; i < VOSPI_PACKETS_PER_SEGMENT; i ++) {
-		tr.rx_buf = (unsigned long)(segment->packets[i].symbols);
-		ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
-		int pn = segment->packets[i].symbols[1];
+	// Read the remaining packets
+	tr.rx_buf = (unsigned long)(segment->packets[1].symbols);
+	tr.len = VOSPI_PACKET_BYTES * (VOSPI_PACKETS_PER_SEGMENT - 1);
+	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
+	if (ret < 1) {
+		perror("SPI: failed to transfer the rest of the segment");
+		exit(-5);
 	}
 }
 
