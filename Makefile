@@ -1,5 +1,17 @@
-CC=gcc
-CFLAGS=-I.
+.PHONY: all clean
 
-leptonic: main.c
-	gcc -o leptonic main.c -I.
+# Headers
+INCLUDES = -Iinclude/
+
+# Sources
+SOURCES = $(wildcard *.c)
+CC = gcc
+CFLAGS = -g
+
+all: ${SOURCES}
+	@mkdir -p bin/
+	$(CC) $(CFLAGS) $(INCLUDES) ${SOURCES} -o leptonic
+
+clean:
+	@rm -f *.o
+	@rm leptonic
