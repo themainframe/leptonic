@@ -11,7 +11,7 @@
 #include <limits.h>
 
 static const char *device = "/dev/spidev0.1";
-static uint8_t mode = 0;
+static uint8_t mode = SPI_MODE_3;
 static uint8_t bits = 8;
 static uint32_t speed = 18000000;
 
@@ -64,7 +64,7 @@ void transfer_segment(int fd, vospi_segment_t* segment)
 	}
 
 	// Read the remaining packets
-	tr.rx_buf = (unsigned long)(segment->packets[1].symbols);
+	tr.rx_buf = (unsigned long)(segment->packets[1]);
 	tr.len = VOSPI_PACKET_BYTES * (VOSPI_PACKETS_PER_SEGMENT - 1);
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1) {
