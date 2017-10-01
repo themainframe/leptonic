@@ -1,3 +1,5 @@
+#include <stdint.h>
+
 #ifndef VOSPI_H
 #define VOSPI_H
 
@@ -19,5 +21,8 @@ typedef struct {
 typedef struct {
 	vospi_packet_t packets[VOSPI_PACKETS_PER_SEGMENT];
 } vospi_segment_t;
+
+int sync_and_transfer_frame(int fd, vospi_segment_t** segments);
+int transfer_frame(int fd, vospi_segment_t** segments);
 
 #endif /* VOSPI_H */
