@@ -1,22 +1,19 @@
-.PHONY: all clean
+.PHONY: examples clean
 
 # Headers
-INCLUDES = -Iinclude/ \
-	-Iinclude/log \
-	-Iinclude/vospi
+INCLUDES = -Iinclude/
 
 # Sources
-SOURCES = $(wildcard src/*.c) \
-	$(wildcard src/cci/*.c) \
-	$(wildcard src/log/*.c)\
-	$(wildcard src/vospi/*.c)
+SOURCES = $(wildcard src/*.c)
 
 CC = gcc
 CFLAGS = -g -DLOG_USE_COLOR=1
 
-all: ${SOURCES}
-	@mkdir -p bin/
-	$(CC) $(CFLAGS) $(INCLUDES) ${SOURCES} -o leptonic
+examples:
+	@mkdir -p bin/examples/
+	$(CC) $(CFLAGS) $(INCLUDES) ${SOURCES} examples/sync_and_get_frames.c -o bin/examples/sync_and_get_frames
+	$(CC) $(CFLAGS) $(INCLUDES) ${SOURCES} examples/cci_do_ffc.c -o bin/examples/cci_do_ffc
+	$(CC) $(CFLAGS) $(INCLUDES) ${SOURCES} examples/telemetry.c -o bin/examples/telemetry
 
 clean:
 	@rm -f *.o

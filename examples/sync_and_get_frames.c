@@ -1,31 +1,22 @@
-#include "log/log.h"
-#include "vospi/vospi.h"
-#include "main.h"
-
+#include "log.h"
+#include "vospi.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <fcntl.h>
-#include <unistd.h>
-#include <sys/ioctl.h>
-#include <linux/types.h>
-#include <linux/spi/spidev.h>
-#include <limits.h>
-
-static uint8_t mode = SPI_MODE_3;
-static uint8_t bits = 8;
-static uint32_t speed = 18000000;
 
 /**
- * Main entry point for Leptonic.
+ * Main entry point for example.
  */
 int main(int argc, char *argv[])
 {
 	log_set_level(LOG_INFO);
-	int ret = 0;
 	int fd;
+
+	// Remind the user about using this example after the telemetry ones
+	log_info("Note that this example assumes the Lepton is in the default startup state.");
+	log_info("If you've already run the telemetry examples, it likely won't work without a restart.");
 
   // Check we have enough arguments to work
   if (argc < 2) {
@@ -41,24 +32,10 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 
-	// Set the various SPI parameters
-	log_debug("setting SPI device mode...");
-	ret = ioctl(fd, SPI_IOC_WR_MODE, &mode);
-	if (ret == -1) {
-		log_fatal("SPI: failed to set mode");
-		exit(-2);
-	}
-	log_debug("setting SPI bits/word...");
-	ret = ioctl(fd, SPI_IOC_WR_BITS_PER_WORD, &bits);
-	if (ret == -1) {
-		log_fatal("SPI: failed to set the bits per word option");
-		exit(-3);
-	}
-	log_debug("setting SPI max clock speed...");
-	ret = ioctl(fd, SPI_IOC_WR_MAX_SPEED_HZ, &speed);
-	if (ret == -1) {
-		log_fatal("SPI: failed to set the max speed option");
-		exit(-4);
+	// Initialise the VoSPI interface
+	if (vospi_init(fd, 18000000) == -1) {
+			log_fatal("SPI: failed condition SPI device for VoSPI use.");
+			exit(-1);
 	}
 
 	// Allocate space to receive the segments
@@ -70,27 +47,24 @@ int main(int argc, char *argv[])
 
 	// Synchronise and transfer a single frame
 	log_info("aquiring VoSPI synchronisation");
-	int resets;
-	if (!(resets = sync_and_transfer_frame(fd, segments))) {
+	if (0 == sync_and_transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
 		log_error("failed to obtain frame from device.");
     exit(-10);
 	}
-	log_info("VoSPI stream synchronised (%d resets required)", resets);
+	log_info("VoSPI stream synchronised");
 
 	do {
-
 			for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
+
+				printf("%02x --> ", segments[seg]->packets[20].id >> 12);
 				for (int i = 0; i < VOSPI_PACKET_BYTES; i ++) {
 					printf("%02x ", segments[seg]->packets[20].symbols[i]);
 				}
 				printf("\n\n");
 			}
-
-			transfer_frame(fd, segments);
-
+			transfer_frame(fd, segments, TELEMETRY_DISABLED);
 	} while (1);
 
-
 	close(fd);
-	return ret;
+	return 0;
 }
