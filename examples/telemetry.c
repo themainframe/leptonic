@@ -73,14 +73,21 @@ int main(int argc, char *argv[])
 	}
 	log_info("VoSPI stream synchronised");
 
-	do {
+	// Parse the telemetry data
+	telemetry_data_t data = parse_telemetry_packet(&segments[0]->packets[0]);
 
-			for (int i = 0; i < VOSPI_PACKET_BYTES; i ++) {
-				printf("%02x ", segments[0]->packets[0].symbols[i]);
-			}
-			printf("\n\n");
-			transfer_frame(spi_fd, segments, TELEMETRY_ENABLED);
-	} while (1);
+	printf("Telemetry ----------------------\n");
+	printf("  Msec Boot: %02x\n", data.msec_since_boot);
+	printf("   Msec FFC: %02x\n", data.msec_last_ffc);
+	printf(" Frame Mean: %02x\n", data.frame_mean);
+	printf(" FPA T K100: %02x\n", data.fpa_temp_kelvin_100);
+	printf("\n\n");
+	printf("Status bits -------------------\n");
+	printf("FFC Desired: %02x\n", data.status_bits.ffc_desired);
+	printf("  FFC State: %02x\n", data.status_bits.ffc_state);
+	printf("  AGC State: %02x\n", data.status_bits.agc_state);
+	printf("  Sht. Lock: %02x\n", data.status_bits.shutter_lockout);
+	printf("Overtemp SD: %02x\n", data.status_bits.overtemp_shutdown_imminent);
 
 	close(spi_fd);
 	return 0;
