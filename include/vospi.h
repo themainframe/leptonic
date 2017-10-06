@@ -18,6 +18,9 @@
 // The maximum number of resets allowed before giving up on synchronising
 #define VOSPI_MAX_SYNC_RESETS 30
 
+// The maximum number of invalid frames before giving up and assuming we've lost sync
+#define VOSPI_MAX_INVALID_FRAMES 10
+
 // Telemetry Mode
 typedef enum {
 	TELEMETRY_DISABLED,

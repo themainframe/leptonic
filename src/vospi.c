@@ -135,16 +135,19 @@ int sync_and_transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_
  */
 int transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_mode_t telemetry_mode)
 {
-	uint8_t ttt_bits;
+	uint8_t ttt_bits, restarts;
 
 	// Receive all segments
 	for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
 		transfer_segment(fd, segments[seg], telemetry_mode);
 
-		ttt_bits = segments[0]->packets[20].id >> 12;
-		log_debug("TTT bits were: %d", ttt_bits);
+		ttt_bits = segments[seg]->packets[20].id >> 12;
 		if (ttt_bits == 0) {
 			seg --;
+			if (restarts ++ > VOSPI_MAX_INVALID_FRAMES) {
+				log_error("too many invalid frames - need to resync");
+				return 0;
+			}
 			continue;
 		}
 	}
