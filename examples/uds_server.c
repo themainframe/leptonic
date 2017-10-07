@@ -5,14 +5,22 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+
+#define SOCKET_PATH "/tmp/lepton.sock"
 
 /**
  * Main entry point for example.
+ *
+ * This example creates a Unix Domain Socket server that listens for a connection on a socket (/tmp/lepton.sock).
+ * Once a connection is created, the server streams base64-encoded frames from the Lepton to the client.
  */
 int main(int argc, char *argv[])
 {
 	log_set_level(LOG_INFO);
-	int fd;
+	int fd, sock;
+  struct sockaddr_un addr;
 
 	// Remind the user about using this example after the telemetry ones
 	log_info("Note that this example assumes the Lepton is in the default startup state.");
@@ -38,6 +46,20 @@ int main(int argc, char *argv[])
 			exit(-1);
 	}
 
+  // Open the socket file
+  sock = socket(AF_UNIX, SOCK_STREAM, 0);
+  if (sock < 0) {
+  		log_fatal("Socket: failed to open socket");
+  		exit(-1);
+  }
+
+  // Set up the socket
+	log_info("creating socket...");
+  memset(&addr, 0, sizeof(addr));
+  addr.sun_family = AF_UNIX;
+  strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
+  bind(sock, (struct sockaddr*)&addr, sizeof(addr));
+
 	// Allocate space to receive the segments
 	log_debug("allocating space for segments...");
 	vospi_segment_t* segments[VOSPI_SEGMENTS_PER_FRAME];
@@ -46,6 +68,12 @@ int main(int argc, char *argv[])
 	}
 
 	do {
+
+    log_info("waiting for a connection...");
+    if ( (cl = accept(fd, NULL, NULL)) == -1) {
+      perror("accept error");
+      continue;
+    }
 
 		// Synchronise and transfer a single frame
 		log_info("aquiring VoSPI synchronisation");

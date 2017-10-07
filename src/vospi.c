@@ -102,7 +102,7 @@ int sync_and_transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_
 			packet_20_num = segments[0]->packets[20].id & 0xff;
 			if (packet_20_num != 20) {
 					// Deselect the chip, wait 200ms with CS deasserted
-					log_info("packet 20 ID was %d - deasserting CS & waiting to reset...", packet_20_num);
+					log_warn("packet 20 ID was %d - deasserting CS & waiting to reset...", packet_20_num);
 					usleep(185000);
 
 					if (++resets >= VOSPI_MAX_SYNC_RESETS) {
@@ -135,7 +135,7 @@ int sync_and_transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_
  */
 int transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_mode_t telemetry_mode)
 {
-	uint8_t ttt_bits, restarts;
+	uint8_t ttt_bits, restarts = 0;
 
 	// Receive all segments
 	for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
