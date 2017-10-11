@@ -6,3 +6,4 @@ bin/
 leptonic
 .atom
 .idea
+node_modules

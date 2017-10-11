@@ -154,3 +154,21 @@ int transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_mode_t te
 
   return 1;
 }
+
+/**
+ * Copies image data from segments into a contiguous buffer.
+ * Converts endianness of image data.
+ */
+int copy_image_data(vospi_segment_t* segment, uint16_t* buf, vospi_telemetry_mode_t telemetry_mode)
+{
+	uint32_t pos = 0;
+	for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT + telemetry_mode; pkt ++) {
+		for (int sym = 0; sym < VOSPI_PACKET_SYMBOLS; sym += 2) {
+			buf[pos++] =
+				segment->packets[pkt].symbols[sym + 1] << 8 |
+				segment->packets[pkt].symbols[sym];
+		}
+	}
+
+	return 0;
+}

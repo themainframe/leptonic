@@ -1,0 +1,15 @@
+{
+  "name": "uds_websockets",
+  "version": "1.0.0",
+  "description": "A bridge between the Unix Domain Socket example and a websockets-based web GUI for the Lepton",
+  "main": "index.js",
+  "author": "Damien Walsh <me@damow.net>",
+  "license": "MIT",
+  "dependencies": {
+    "express": "4.15.2",
+    "socket.io": "^2.0.3"
+  },
+  "scripts": {
+    "start": "node index.js"
+  }
+}

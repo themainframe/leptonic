@@ -19,7 +19,7 @@
 int main(int argc, char *argv[])
 {
 	log_set_level(LOG_INFO);
-	int fd, sock;
+	int fd, sock, client, written;
   struct sockaddr_un addr;
 
 	// Remind the user about using this example after the telemetry ones
@@ -46,6 +46,9 @@ int main(int argc, char *argv[])
 			exit(-1);
 	}
 
+  // Unlink the existing socket
+  unlink(SOCKET_PATH);
+
   // Open the socket file
   sock = socket(AF_UNIX, SOCK_STREAM, 0);
   if (sock < 0) {
@@ -60,6 +63,12 @@ int main(int argc, char *argv[])
   strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
   bind(sock, (struct sockaddr*)&addr, sizeof(addr));
 
+  // Start listening
+  if (listen(sock, 5) == -1) {
+    log_fatal("error listening on socket");
+    exit(-1);
+  }
+
 	// Allocate space to receive the segments
 	log_debug("allocating space for segments...");
 	vospi_segment_t* segments[VOSPI_SEGMENTS_PER_FRAME];
@@ -70,26 +79,44 @@ int main(int argc, char *argv[])
 	do {
 
     log_info("waiting for a connection...");
-    if ( (cl = accept(fd, NULL, NULL)) == -1) {
-      perror("accept error");
+    if ((client = accept(sock, NULL, NULL)) == -1) {
+      log_warn("error accepting connection from client");
       continue;
     }
 
-		// Synchronise and transfer a single frame
-		log_info("aquiring VoSPI synchronisation");
-		if (0 == sync_and_transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
-			log_error("failed to obtain frame from device.");
-	    exit(-10);
-		}
-		log_info("VoSPI stream synchronised");
+  	do {
 
-		do {
-				if (!transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
-					break;
-				}
-		} while (1);
+  		// Synchronise and transfer a single frame
+  		log_info("aquiring VoSPI synchronisation");
+  		if (0 == sync_and_transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+  			log_error("failed to obtain frame from device.");
+  	    exit(-10);
+  		}
+  		log_info("VoSPI stream synchronised");
 
-	} while (1);
+  		do {
+  				if (!transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+  					break;
+  				}
+
+
+					// Read out all segments together rather than writing one at a time
+					// Lags between frames is fine but lags between segments is not good
+					for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
+						if (segments[seg]->packets[20].id >> 12 != seg) {
+							break;
+						}
+						log_info("Packet 20 ID: %d", segments[seg]->packets[20].id >> 12);
+						for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT; pkt ++) {
+							write(client, segments[seg]->packets[pkt].symbols, VOSPI_PACKET_SYMBOLS);
+						}
+					}
+
+  		} while (1); // While we are synchronised
+
+    } while (1);  // While we are connected to the client
+
+	} while (1);  // Forever
 
 	close(fd);
 	return 0;
