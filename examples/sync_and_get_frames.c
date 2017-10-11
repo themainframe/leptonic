@@ -43,20 +43,21 @@ int main(int argc, char *argv[])
 	vospi_segment_t* segments[VOSPI_SEGMENTS_PER_FRAME];
 	for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
 		segments[seg] = malloc(sizeof(vospi_segment_t));
+		segments[seg]->packet_count = VOSPI_PACKETS_PER_SEGMENT_NORMAL;
 	}
 
 	do {
 
 		// Synchronise and transfer a single frame
 		log_info("aquiring VoSPI synchronisation");
-		if (0 == sync_and_transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+		if (0 == sync_and_transfer_frame(fd, segments)) {
 			log_error("failed to obtain frame from device.");
 	    exit(-10);
 		}
 		log_info("VoSPI stream synchronised");
 
 		do {
-				if (!transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+				if (!transfer_frame(fd, segments)) {
 					break;
 				}
 		} while (1);

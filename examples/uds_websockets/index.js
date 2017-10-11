@@ -13,6 +13,7 @@ const client = net.createConnection({ path: "/tmp/lepton.sock" });
 
 // Upon Lepton data arriving, build up a frame
 client.on('data', (data) => {
+
   frameBufferSize += data.copy(frameBuffer, frameBufferSize);
 
   // When we've received enough bytes
@@ -22,7 +23,7 @@ client.on('data', (data) => {
     frameBuffer.swap16();
 
     // Build the frame and dispatch it to everyone
-    io.emit('frame', frameBuffer, {for: 'everyone'});
+    io.volatile.emit('frame', frameBuffer, {for: 'everyone'});
 
     // Start working on a new frame
     frameBufferSize = 0;

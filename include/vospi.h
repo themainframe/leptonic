@@ -8,28 +8,22 @@
 
 // The size of a single VoSPI packet
 #define VOSPI_PACKET_BYTES 164
-
-// The number of symbol bytes (I.e. non-ID and non-CRC bytes in a VoSPI packet)
 #define VOSPI_PACKET_SYMBOLS VOSPI_PACKET_BYTES - 4
 
-// The (normal) number of packets per segment
-#define VOSPI_PACKETS_PER_SEGMENT 60
+// The maximum number of packets per segment, sufficient to include telemetry
+#define VOSPI_MAX_PACKETS_PER_SEGMENT 61
+// The number of packets in segments with and without telemetry lines present
+#define VOSPI_PACKETS_PER_SEGMENT_NORMAL 60
+#define VOSPI_PACKETS_PER_SEGMENT_TELEMETRY 61
 
 // The number of segments per frame
 #define VOSPI_SEGMENTS_PER_FRAME 4
 
 // The maximum number of resets allowed before giving up on synchronising
 #define VOSPI_MAX_SYNC_RESETS 30
-
 // The maximum number of invalid frames before giving up and assuming we've lost sync
 // FFC duration is nominally 23 frames, so we should never exceed that
 #define VOSPI_MAX_INVALID_FRAMES 25
-
-// Telemetry Mode
-typedef enum {
-	TELEMETRY_DISABLED,
-	TELEMETRY_ENABLED
-} vospi_telemetry_mode_t;
 
 // A single VoSPI packet
 typedef struct {
@@ -40,12 +34,17 @@ typedef struct {
 
 // A single VoSPI segment
 typedef struct {
-	vospi_packet_t packets[VOSPI_PACKETS_PER_SEGMENT];
+	vospi_packet_t packets[VOSPI_MAX_PACKETS_PER_SEGMENT];
+	int packet_count;
 } vospi_segment_t;
 
+// A single VoSPI frame
+typedef struct {
+	vospi_segment_t segments[VOSPI_SEGMENTS_PER_FRAME];
+} vospi_frame_t;
+
 int vospi_init(int fd, uint32_t speed);
-int sync_and_transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_mode_t telemetry_mode);
-int transfer_frame(int fd, vospi_segment_t** segments, vospi_telemetry_mode_t telemetry_mode);
-int copy_image_data(vospi_segment_t* segments, uint16_t* buf, vospi_telemetry_mode_t telemetry_mode);
+int sync_and_transfer_frame(int fd, vospi_frame_t* frame);
+int transfer_frame(int fd, vospi_frame_t* frame);
 
 #endif /* VOSPI_H */

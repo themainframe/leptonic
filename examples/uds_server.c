@@ -74,6 +74,7 @@ int main(int argc, char *argv[])
 	vospi_segment_t* segments[VOSPI_SEGMENTS_PER_FRAME];
 	for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
 		segments[seg] = malloc(sizeof(vospi_segment_t));
+		segments[seg]->packet_count = VOSPI_PACKETS_PER_SEGMENT_NORMAL;
 	}
 
 	do {
@@ -88,33 +89,35 @@ int main(int argc, char *argv[])
 
   		// Synchronise and transfer a single frame
   		log_info("aquiring VoSPI synchronisation");
-  		if (0 == sync_and_transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+  		if (0 == sync_and_transfer_frame(fd, segments)) {
   			log_error("failed to obtain frame from device.");
   	    exit(-10);
   		}
   		log_info("VoSPI stream synchronised");
 
   		do {
-  				if (!transfer_frame(fd, segments, TELEMETRY_DISABLED)) {
+  				if (!client || !transfer_frame(fd, segments)) {
   					break;
   				}
-
 
 					// Read out all segments together rather than writing one at a time
 					// Lags between frames is fine but lags between segments is not good
 					for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
-						if (segments[seg]->packets[20].id >> 12 != seg) {
-							break;
+						if (segments[seg]->packets[20].id >> 12 != seg + 1) {
+							continue;
 						}
-						log_info("Packet 20 ID: %d", segments[seg]->packets[20].id >> 12);
-						for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT; pkt ++) {
-							write(client, segments[seg]->packets[pkt].symbols, VOSPI_PACKET_SYMBOLS);
+						for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
+							if (send(client, segments[seg]->packets[pkt].symbols, VOSPI_PACKET_SYMBOLS, MSG_NOSIGNAL) < 0) {
+								log_warn("socket disconnected.");
+								client = 0;
+								break;
+							}
 						}
 					}
 
   		} while (1); // While we are synchronised
 
-    } while (1);  // While we are connected to the client
+    } while (client);  // While we are connected to the client
 
 	} while (1);  // Forever
 
