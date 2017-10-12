@@ -21,15 +21,17 @@ int main(int argc, char *argv[])
 
   // Open the I2C device
   log_info("opening I2C device...");
-  fd = open(argv[1], O_RDWR);
-  if (fd < 0) {
+  if ((fd = open(argv[1], O_RDWR)) < 0) {
     log_fatal("I2C: failed to open device - check permissions & i2c enabled");
     exit(-1);
   }
 
   // Perform an FFC
   cci_init(fd);
-  cci_run_ffc(fd);
+  printf("AGCState: %d\n", cci_get_agc_enable_state(fd));
+  printf("Setting to: %d\n", atoi(argv[2]));
+  cci_set_agc_enable_state(fd, (cci_agc_enable_state_t)atoi(argv[2]));
+  printf("AGCState: %d\n", cci_get_agc_enable_state(fd));
 
   // Close up
   close(fd);

@@ -5,20 +5,21 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <pthread.h>
 #include <semaphore.h>
+#include <assert.h>
+#include <string.h>
+#include <zmq.h>
 
-#define SOCKET_PATH "/tmp/lepton.sock"
+#define ZMQ_SOCKET_SPEC "tcp://*:5555"
 
 // The size of the circular frame buffer
-#define FRAME_BUF_SIZE 16
+#define FRAME_BUF_SIZE 8
 
 // Positions of the reader and writer in the frame buffer
 int reader = 0, writer = 0;
 
-// semaphores tracking the available spaces and number of frames
+// semaphore tracking the number of frames available
 sem_t count_sem;
 
 // a lock protecting accesses to the frame buffer
@@ -52,7 +53,7 @@ void* get_frames_from_device(void* spidev_path_ptr)
   	}
 
   	// Initialise the VoSPI interface
-  	if (vospi_init(spi_fd, 18000000) == -1) {
+  	if (vospi_init(spi_fd, 20000000) == -1) {
   			log_fatal("SPI: failed to condition SPI device for VoSPI use.");
   			exit(-1);
   	}
@@ -75,22 +76,6 @@ void* get_frames_from_device(void* spidev_path_ptr)
   					break;
   				}
 
-          // Verify the frame
-          int need_resync = 0;
-          for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
-            if (frame.segments[seg].packets[20].id >> 12 != seg + 1) {
-              // Skip this entire frame
-              log_info("Received an invalid frame - seg %d TTT was %d", seg, frame.segments[seg].packets[20].id >> 12);
-              need_resync = 1;
-              break;
-            }
-          }
-
-          // Resync if any part of the frame is broken
-          if (need_resync) {
-            break;
-          }
-
           pthread_mutex_lock(&lock);
 
           // Copy the newly-received frame into place
@@ -104,95 +89,63 @@ void* get_frames_from_device(void* spidev_path_ptr)
           sem_post(&count_sem);
 
   		} while (1); // While synchronised
-
     } while (1);  // Forever
 
 }
 
 /**
- * Listen for connections on a unix domain socket, stream frames out once we obtain a connection.
+ * Wait for reqests for frames on the ZMQ socket and respond with a frame each time.
  */
 void* send_frames_to_socket(void* args)
 {
-    int sock, client;
-    struct sockaddr_un addr;
+    // Create the ZMQ context & socket
+    void *context = zmq_ctx_new();
+    void *responder = zmq_socket(context, ZMQ_REP);
+    zmq_bind(responder, ZMQ_SOCKET_SPEC);
 
-    // Declare a static frame to use as a scratch space to avoid locking the framebuffer while
-    // we're transmitting our frame
-    vospi_frame_t frame;
+    // Declare a static frame
+    vospi_frame_t next_frame;
 
-    // Unlink the existing socket
-    unlink(SOCKET_PATH);
+    // Declare a static buffer to copy frame data into for sending
+    unsigned char message_buf[VOSPI_SEGMENTS_PER_FRAME * VOSPI_PACKETS_PER_SEGMENT_NORMAL * VOSPI_PACKET_SYMBOLS];
 
-    // Open the socket file
-    sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (sock < 0) {
-    		log_fatal("Socket: failed to open socket");
-    		exit(-1);
-    }
-
-    // Set up the socket
-  	log_info("creating socket...");
-    memset(&addr, 0, sizeof(addr));
-    addr.sun_family = AF_UNIX;
-    strncpy(addr.sun_path, SOCKET_PATH, sizeof(addr.sun_path) - 1);
-    bind(sock, (struct sockaddr*)&addr, sizeof(addr));
-
-    // Start listening
-    if (listen(sock, 5) == -1) {
-      log_fatal("error listening on socket");
-      exit(-1);
-    }
-
-    log_info("waiting for a connection...");
     while (1) {
 
-      // Accept the client connection
-      if ((client = accept(sock, NULL, NULL)) == -1) {
-        log_warn("failed to accept connection");
-        continue;
-      }
+      // Receive requests
+      char req_buf[10];
+      zmq_recv(responder, req_buf, 10, 0);
 
-      log_info("Got connection: %d", client);
+      // Wait if there are no new frames to transmit
+      sem_wait(&count_sem);
 
-      // While we're connected
-      while (client > 0) {
+      // Lock the data structure to prevent new frames being added while we're reading this one
+      pthread_mutex_lock(&lock);
 
-        // Wait if there are no new frames to transmit
-        sem_wait(&count_sem);
+      // Copy the next frame out ready to transmit
+      memcpy(&next_frame, frame_buf[reader], sizeof(vospi_frame_t));
 
-        // Lock the data structure to prevent new frames being added while we're reading this one
-        pthread_mutex_lock(&lock);
+      // Move the reader ahead
+      reader = (reader + 1) & (FRAME_BUF_SIZE - 1);
 
-        // Copy the next frame out ready to transmit
-        memcpy(&frame, frame_buf[reader], sizeof(vospi_frame_t));
+      // Unlock data structure
+      pthread_mutex_unlock(&lock);
 
-        // Move the reader ahead
-        reader = (reader + 1) & (FRAME_BUF_SIZE - 1);
-
-        // Unlock data structure
-        pthread_mutex_unlock(&lock);
-
-        // Transmit the frame
-        for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
-
-          // Send each packet from the segment
-          for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
-            if (send(client, frame.segments[seg].packets[pkt].symbols, VOSPI_PACKET_SYMBOLS, MSG_NOSIGNAL) < 0) {
-              log_warn("socket disconnected.");
-              client = 0;
-              break;
-            }
-          }
-
-          // If the client disconnected, don't send them any more segments
-          if (!client) {
-            break;
-          }
+      // Prepare the message buffer
+      void* message_buf_pos = &message_buf;
+      for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
+        for (int pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
+          // Copy each packet into the message buffer
+          memcpy(
+            message_buf_pos,
+            next_frame.segments[seg].packets[pkt].symbols,
+            VOSPI_PACKET_SYMBOLS
+          );
+          message_buf_pos += VOSPI_PACKET_SYMBOLS;
         }
-
       }
 
+      // Send the message
+      zmq_send(responder, message_buf, sizeof(message_buf), 0);
     }
 }
 
@@ -239,6 +192,6 @@ int main(int argc, char *argv[])
     return 1;
   }
 
-    pthread_join(get_frames_thread, NULL);
-    pthread_join(send_frames_to_socket_thread, NULL);
+  pthread_join(get_frames_thread, NULL);
+  pthread_join(send_frames_to_socket_thread, NULL);
 }

@@ -8,7 +8,7 @@
 
 // The size of a single VoSPI packet
 #define VOSPI_PACKET_BYTES 164
-#define VOSPI_PACKET_SYMBOLS VOSPI_PACKET_BYTES - 4
+#define VOSPI_PACKET_SYMBOLS 160
 
 // The maximum number of packets per segment, sufficient to include telemetry
 #define VOSPI_MAX_PACKETS_PER_SEGMENT 61

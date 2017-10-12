@@ -1,12 +1,34 @@
-<body>
-  <canvas id="canvas" width="160" height="120"></canvas>
-</body>
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
-<script>
-
 (function($) {
+
+  function setupNavbarHandlers() {
+
+    // Get all "navbar-burger" elements
+    var $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll('.navbar-burger'), 0);
+
+    // Check if there are any navbar burgers
+    if ($navbarBurgers.length > 0) {
+
+      // Add a click event on each of them
+      $navbarBurgers.forEach(function ($el) {
+        $el.addEventListener('click', function () {
+
+          // Get the target from the "data-target" attribute
+          var target = $el.dataset.target;
+          var $target = document.getElementById(target);
+
+          // Toggle the class on both the "navbar-burger" and the "navbar-menu"
+          $el.classList.toggle('is-active');
+          $target.classList.toggle('is-active');
+
+        });
+      });
+    }
+
+  }
+
   $(function () {
+
+      setupNavbarHandlers();
 
       var socket = io();
       var canvas = document.getElementById('canvas');
@@ -28,15 +50,15 @@
         for (var c = 0; c < intData.length; c ++) {
           // Normalise each pixel value first
           var pixelValue = parseInt((intData[c] - min) / range * 255);
+          // var pixelValue = parseInt(intData[c] / 16384 * 255);
           imageData.data[(c * 4) + 0] = pixelValue;
           imageData.data[(c * 4) + 1] = pixelValue;
           imageData.data[(c * 4) + 2] = pixelValue;
         }
+
         ctx.putImageData(imageData, 0, 0);
 
       });
 
   });
 })(jQuery);
-
-</script>

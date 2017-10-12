@@ -142,9 +142,9 @@ int transfer_frame(int fd, vospi_frame_t* frame)
 		transfer_segment(fd, &frame->segments[seg]);
 
 		ttt_bits = frame->segments[seg].packets[20].id >> 12;
-		if (ttt_bits == 0) {
+		if (ttt_bits != seg + 1) {
 			seg --;
-			if (restarts ++ > VOSPI_MAX_INVALID_FRAMES) {
+			if (restarts ++ > VOSPI_MAX_INVALID_FRAMES * 4) {
 				log_error("too many invalid frames - need to resync");
 				return 0;
 			}

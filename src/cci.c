@@ -137,3 +137,87 @@ uint32_t cci_get_telemetry_location(int fd)
   uint16_t ms_word = cci_read_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH);
   return ms_word << 16 | ls_word;
 }
+
+/**
+ * Change the radiometry enable state.
+ */
+void cci_set_radiometry_enable_state(int fd, cci_radiometry_enable_state_t state)
+{
+  uint32_t value = state;
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_0, value & 0xffff);
+  cci_write_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH, value >> 16 & 0xffff);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_RAD_SET_RADIOMETRY_ENABLE_STATE);
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  WAIT_FOR_BUSY_DEASSERT()
+}
+
+/**
+ * Get the radiometry enable state.
+ */
+uint32_t cci_get_radiometry_enable_state(int fd)
+{
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_RAD_GET_RADIOMETRY_ENABLE_STATE);
+  WAIT_FOR_BUSY_DEASSERT()
+  uint16_t ls_word = cci_read_register(fd, CCI_REG_DATA_0);
+  uint16_t ms_word = cci_read_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH);
+  return ms_word << 16 | ls_word;
+}
+
+/**
+ * Change the radiometry TLinear enable state.
+ */
+void cci_set_radiometry_tlinear_enable_state(int fd, cci_radiometry_tlinear_enable_state_t state)
+{
+  uint32_t value = state;
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_0, value & 0xffff);
+  cci_write_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH, value >> 16 & 0xffff);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_RAD_SET_RADIOMETRY_TLINEAR_ENABLE_STATE);
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  WAIT_FOR_BUSY_DEASSERT()
+}
+
+/**
+ * Get the radiometry TLinear enable state.
+ */
+uint32_t cci_get_radiometry_tlinear_enable_state(int fd)
+{
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_RAD_GET_RADIOMETRY_TLINEAR_ENABLE_STATE);
+  WAIT_FOR_BUSY_DEASSERT()
+  uint16_t ls_word = cci_read_register(fd, CCI_REG_DATA_0);
+  uint16_t ms_word = cci_read_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH);
+  return ms_word << 16 | ls_word;
+}
+
+/**
+ * Get the AGC enable state.
+ */
+uint32_t cci_get_agc_enable_state(int fd)
+{
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_AGC_GET_AGC_ENABLE_STATE);
+  WAIT_FOR_BUSY_DEASSERT()
+  uint16_t ls_word = cci_read_register(fd, CCI_REG_DATA_0);
+  uint16_t ms_word = cci_read_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH);
+  return ms_word << 16 | ls_word;
+}
+
+/**
+ * Set the AGC enable state.
+ */
+void cci_set_agc_enable_state(int fd, cci_agc_enable_state_t state)
+{
+  uint32_t value = state;
+  WAIT_FOR_BUSY_DEASSERT()
+  cci_write_register(fd, CCI_REG_DATA_0, value & 0xffff);
+  cci_write_register(fd, CCI_REG_DATA_0 + CCI_WORD_LENGTH, value >> 16 & 0xffff);
+  cci_write_register(fd, CCI_REG_COMMAND, CCI_CMD_AGC_SET_AGC_ENABLE_STATE);
+  cci_write_register(fd, CCI_REG_DATA_LENGTH, 2);
+  WAIT_FOR_BUSY_DEASSERT()
+}

@@ -21,6 +21,16 @@
 #define CCI_CMD_SYS_GET_TELEMETRY_LOCATION 0x021C
 #define CCI_CMD_SYS_SET_TELEMETRY_LOCATION 0x021D
 
+#define CCI_CMD_RAD_GET_RADIOMETRY_ENABLE_STATE 0x0E10
+#define CCI_CMD_RAD_SET_RADIOMETRY_ENABLE_STATE 0x0E11
+#define CCI_CMD_RAD_GET_RADIOMETRY_TLINEAR_ENABLE_STATE 0x0EC0
+#define CCI_CMD_RAD_SET_RADIOMETRY_TLINEAR_ENABLE_STATE 0x0EC1
+
+#define CCI_CMD_AGC_GET_AGC_ENABLE_STATE 0x0100
+#define CCI_CMD_AGC_SET_AGC_ENABLE_STATE 0x0101
+
+#define WAIT_FOR_BUSY_DEASSERT() while (cci_read_register(fd, CCI_REG_STATUS) & 0x01) ;
+
 /* Telemetry Modes for use with CCI_CMD_SYS_SET_TELEMETRY_* */
 typedef enum {
   CCI_TELEMETRY_DISABLED,
@@ -32,7 +42,22 @@ typedef enum {
   CCI_TELEMETRY_LOCATION_FOOTER,
 } cci_telemetry_location_t;
 
-#define WAIT_FOR_BUSY_DEASSERT() while (cci_read_register(fd, CCI_REG_STATUS) & 0x01) ;
+/* Radiometry Modes for use with CCI_CMD_RAD_SET_RADIOMETRY* */
+typedef enum {
+  CCI_RADIOMETRY_DISABLED,
+  CCI_RADIOMETRY_ENABLED,
+} cci_radiometry_enable_state_t;
+
+typedef enum {
+  CCI_RADIOMETRY_TLINEAR_DISABLED,
+  CCI_RADIOMETRY_TLINEAR_ENABLED,
+} cci_radiometry_tlinear_enable_state_t;
+
+/* AGC Modes for use with CCI_CMD_AGC_SET_AGC* */
+typedef enum {
+  CCI_AGC_DISABLED,
+  CCI_AGC_ENABLED,
+} cci_agc_enable_state_t;
 
 /* Setup */
 int cci_init(int fd);
@@ -48,5 +73,15 @@ void cci_set_telemetry_enable_state(int fd, cci_telemetry_enable_state_t state);
 uint32_t cci_get_telemetry_enable_state(int fd);
 void cci_set_telemetry_location(int fd, cci_telemetry_location_t location);
 uint32_t cci_get_telemetry_location(int fd);
+
+/* Module: RAD */
+void cci_set_radiometry_enable_state(int fd, cci_radiometry_enable_state_t state);
+uint32_t cci_get_radiometry_enable_state(int fd);
+void cci_set_radiometry_tlinear_enable_state(int fd, cci_radiometry_tlinear_enable_state_t state);
+uint32_t cci_get_radiometry_tlinear_enable_state(int fd);
+
+/* Module: AGC */
+void cci_set_agc_enable_state(int fd, cci_agc_enable_state_t state);
+uint32_t cci_get_agc_enable_state(int fd);
 
 #endif /* CCI_H */
