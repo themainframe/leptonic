@@ -54,7 +54,7 @@ int transfer_segment(int fd, vospi_segment_t* segment)
 	segment->packets[0].id = FLIP_WORD_BYTES(segment->packets[0].id);
 	segment->packets[0].crc = FLIP_WORD_BYTES(segment->packets[0].crc);
 
-	while (segment->packets[0].id & 0x0f00 == 0x0f00) {
+	while ((segment->packets[0].id & 0x0f00) == 0x0f00) {
 		// It was a discard packet, try receiving another packet into the same buf
     read(fd, &segment->packets[0], VOSPI_PACKET_BYTES);
 	}

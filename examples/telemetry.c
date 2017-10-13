@@ -10,6 +10,8 @@
 
 /**
  * Main entry point for example.
+ *
+ * This example enables telemetry data, transfers a single frame then displays the received information.
  */
 int main(int argc, char *argv[])
 {
@@ -60,35 +62,39 @@ int main(int argc, char *argv[])
 
 	// Allocate space to receive the segments
 	log_debug("allocating space for segments...");
-	vospi_segment_t* segments[VOSPI_SEGMENTS_PER_FRAME];
-	for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
-		segments[seg] = malloc(sizeof(vospi_segment_t));
-	}
+	vospi_frame_t frame;
+  for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
+    frame.segments[seg].packet_count = VOSPI_PACKETS_PER_SEGMENT_TELEMETRY;
+  }
 
 	// Synchronise and transfer a single frame
 	log_info("aquiring VoSPI synchronisation");
-	if (0 == sync_and_transfer_frame(spi_fd, segments, TELEMETRY_ENABLED)) {
+	if (0 == sync_and_transfer_frame(spi_fd, &frame)) {
 		log_error("failed to obtain frame from device.");
     exit(-10);
 	}
 	log_info("VoSPI stream synchronised");
 
 	// Parse the telemetry data
-	telemetry_data_t data = parse_telemetry_packet(&segments[0]->packets[0]);
+	telemetry_data_t data = parse_telemetry_packet(&(frame.segments[0].packets[0]));
 
-	printf("Telemetry ----------------------\n");
-	printf("  Msec Boot: %02x\n", data.msec_since_boot);
-	printf("   Msec FFC: %02x\n", data.msec_last_ffc);
-	printf(" Frame Mean: %02x\n", data.frame_mean);
-	printf(" FPA T K100: %02x\n", data.fpa_temp_kelvin_100);
-	printf("\n\n");
-	printf("Status bits -------------------\n");
-	printf("FFC Desired: %02x\n", data.status_bits.ffc_desired);
-	printf("  FFC State: %02x\n", data.status_bits.ffc_state);
-	printf("  AGC State: %02x\n", data.status_bits.agc_state);
-	printf("  Sht. Lock: %02x\n", data.status_bits.shutter_lockout);
-	printf("Overtemp SD: %02x\n", data.status_bits.overtemp_shutdown_imminent);
+  log_info("Telmetry data decoded:");
+	log_info("Msec since boot: %02x", data.msec_since_boot);
+	log_info("Msec since last FFC: %02x", data.msec_last_ffc);
+	log_info("Frame mean: %02x", data.frame_mean);
+	log_info("FPA Temp Kelvin100: %02x", data.fpa_temp_kelvin_100);
+	log_info("FFC Desired: %02x", data.status_bits.ffc_desired);
+	log_info("FFC State: %02x", data.status_bits.ffc_state);
+	log_info("AGC State: %02x", data.status_bits.agc_state);
+	log_info("Shutter locked?: %02x", data.status_bits.shutter_lockout);
+	log_info("Overtemp shutdown imminent?: %02x", data.status_bits.overtemp_shutdown_imminent);
 
+  // Disable telemetry again to leave the module in a usable state for other examples
+  cci_set_telemetry_enable_state(i2c_fd, CCI_TELEMETRY_DISABLED);
+
+  // Close files
 	close(spi_fd);
+  close(i2c_fd);
+
 	return 0;
 }

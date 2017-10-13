@@ -26,7 +26,6 @@ typedef struct {
   uint32_t msec_since_boot;
   telemetry_data_status_bits_t status_bits;
   uint64_t software_rev;
-  uint16_t reserved_1[3];
   uint32_t frame_count;
   uint16_t frame_mean;
   uint16_t fpa_temp_count;

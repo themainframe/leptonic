@@ -28,10 +28,7 @@ int main(int argc, char *argv[])
 
   // Perform an FFC
   cci_init(fd);
-  printf("AGCState: %d\n", cci_get_agc_enable_state(fd));
-  printf("Setting to: %d\n", atoi(argv[2]));
-  cci_set_agc_enable_state(fd, (cci_agc_enable_state_t)atoi(argv[2]));
-  printf("AGCState: %d\n", cci_get_agc_enable_state(fd));
+  cci_run_ffc(fd);
 
   // Close up
   close(fd);
