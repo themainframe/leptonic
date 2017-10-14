@@ -23,11 +23,11 @@
         // Build some image data with the integers
         for (var c = 0; c < intData.length; c ++) {
           // Normalise each pixel value first
-          var pixelValue = parseInt((intData[c] - min) / range * 255);
+          var pixelValue = parseInt((intData[c] - min) / range * 254);
           // var pixelValue = parseInt(intData[c] / 16384 * 255);
-          imageData.data[(c * 4) + 0] = pixelValue;
-          imageData.data[(c * 4) + 1] = pixelValue;
-          imageData.data[(c * 4) + 2] = pixelValue;
+          imageData.data[(c * 4) + 0] = gradients.fusion[pixelValue][0];
+          imageData.data[(c * 4) + 1] = gradients.fusion[pixelValue][1];
+          imageData.data[(c * 4) + 2] = gradients.fusion[pixelValue][2];
         }
 
         ctx.putImageData(imageData, 0, 0);
