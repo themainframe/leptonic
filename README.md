@@ -2,6 +2,8 @@
 
 **A web GUI and several utilities for working with FLIR® Lepton® 3 LWIR camera modules.**
 
+<img src="https://i.imgur.com/uULTPun.png">
+
 ---
 
 Leptonic can:
