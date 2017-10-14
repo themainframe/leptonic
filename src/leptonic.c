@@ -46,18 +46,18 @@ void* get_frames_from_device(void* spidev_path_ptr)
       frame.segments[seg].packet_count = VOSPI_PACKETS_PER_SEGMENT_NORMAL;
     }
 
-  	// Open the spidev device
-  	log_info("opening SPI device... %s", spidev_path);
-  	if ((spi_fd = open(spidev_path, O_RDWR)) < 0) {
-  		log_fatal("SPI: failed to open device - check permissions & spidev enabled");
-  		exit(-1);
-  	}
+    // Open the spidev device
+    log_info("opening SPI device... %s", spidev_path);
+    if ((spi_fd = open(spidev_path, O_RDWR)) < 0) {
+      log_fatal("SPI: failed to open device - check permissions & spidev enabled");
+      exit(-1);
+    }
 
-  	// Initialise the VoSPI interface
-  	if (vospi_init(spi_fd, 20000000) == -1) {
-  			log_fatal("SPI: failed to condition SPI device for VoSPI use.");
-  			exit(-1);
-  	}
+    // Initialise the VoSPI interface
+    if (vospi_init(spi_fd, 20000000) == -1) {
+        log_fatal("SPI: failed to condition SPI device for VoSPI use.");
+        exit(-1);
+    }
 
     // Synchronise, then receive frames forever
     do {
@@ -73,9 +73,9 @@ void* get_frames_from_device(void* spidev_path_ptr)
 
       do {
 
-  				if (!transfer_frame(spi_fd, &frame)) {
-  					break;
-  				}
+          if (!transfer_frame(spi_fd, &frame)) {
+            break;
+          }
 
           pthread_mutex_lock(&lock);
 
@@ -89,7 +89,7 @@ void* get_frames_from_device(void* spidev_path_ptr)
           pthread_mutex_unlock(&lock);
           sem_post(&count_sem);
 
-  		} while (1); // While synchronised
+      } while (1); // While synchronised
     } while (1);  // Forever
 
 }
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
   pthread_t get_frames_thread, send_frames_to_socket_thread;
 
   // Set the log level
-	log_set_level(LOG_INFO);
+  log_set_level(LOG_INFO);
 
   // Setup semaphores
   sem_init(&count_sem, 0, 0);
@@ -173,14 +173,14 @@ int main(int argc, char *argv[])
     exit(-1);
   }
 
-	// Allocate space to receive the segments in the circular buffer
-	log_info("preallocating space for segments...");
-	for (int frame = 0; frame < FRAME_BUF_SIZE; frame ++) {
-		frame_buf[frame] = malloc(sizeof(vospi_frame_t));
+  // Allocate space to receive the segments in the circular buffer
+  log_info("preallocating space for segments...");
+  for (int frame = 0; frame < FRAME_BUF_SIZE; frame ++) {
+    frame_buf[frame] = malloc(sizeof(vospi_frame_t));
     for (int seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
       frame_buf[frame]->segments[seg].packet_count = VOSPI_PACKETS_PER_SEGMENT_NORMAL;
     }
-	}
+  }
 
   log_info("Creating get_frames_from_device thread");
   if (pthread_create(&get_frames_thread, NULL, get_frames_from_device, argv[1])) {

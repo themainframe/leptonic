@@ -27,20 +27,20 @@
 
 // A single VoSPI packet
 typedef struct {
-	uint16_t id;
-	uint16_t crc;
-	uint8_t symbols[VOSPI_PACKET_SYMBOLS];
+  uint16_t id;
+  uint16_t crc;
+  uint8_t symbols[VOSPI_PACKET_SYMBOLS];
 } vospi_packet_t;
 
 // A single VoSPI segment
 typedef struct {
-	vospi_packet_t packets[VOSPI_MAX_PACKETS_PER_SEGMENT];
-	int packet_count;
+  vospi_packet_t packets[VOSPI_MAX_PACKETS_PER_SEGMENT];
+  int packet_count;
 } vospi_segment_t;
 
 // A single VoSPI frame
 typedef struct {
-	vospi_segment_t segments[VOSPI_SEGMENTS_PER_FRAME];
+  vospi_segment_t segments[VOSPI_SEGMENTS_PER_FRAME];
 } vospi_frame_t;
 
 int vospi_init(int fd, uint32_t speed);
