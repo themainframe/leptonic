@@ -15,6 +15,7 @@ main:
 examples:
 	@mkdir -p bin/examples/
 	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_do_ffc.c -o bin/examples/cci_do_ffc
+	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_set_agc.c -o bin/examples/cci_set_agc
 	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/telemetry.c -o bin/examples/telemetry
 
 clean:
