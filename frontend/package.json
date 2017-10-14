@@ -8,6 +8,7 @@
   "dependencies": {
     "bulma": "^0.6.0",
     "express": "4.15.2",
+    "pako": "^1.0.6",
     "socket.io": "^2.0.3",
     "zeromq": "^4.6.0"
   },

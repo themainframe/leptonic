@@ -9,8 +9,11 @@
 
       socket.on('frame', function (msg) {
 
+        // Inflate the data
+        var inflatedData = pako.inflate(msg).buffer;
+
         // Create an array of unsigned integers from the array
-        var intData = new Uint16Array(msg);
+        var intData = new Uint16Array(inflatedData);
 
         // Take the range of the values
         var max = Math.max.apply(Math, intData);
