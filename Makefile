@@ -6,6 +6,9 @@ API_INCLUDES = -Iinclude/api
 # Sources
 API_SOURCES = $(wildcard src/api/*.c)
 
+# GTK Includes
+GTK_INCLUDES = `pkg-config --cflags --libs gtk+-3.0`
+
 CC = gcc
 CFLAGS = -g -DLOG_USE_COLOR=1 -Wall
 
@@ -14,9 +17,10 @@ main:
 
 examples:
 	@mkdir -p bin/examples/
-	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_do_ffc.c -o bin/examples/cci_do_ffc
-	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_set_agc.c -o bin/examples/cci_set_agc
-	$(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/telemetry.c -o bin/examples/telemetry
+	# $(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_do_ffc.c -o bin/examples/cci_do_ffc
+	# $(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/cci_set_agc.c -o bin/examples/cci_set_agc
+	# $(CC) $(CFLAGS) $(API_INCLUDES) ${API_SOURCES} examples/telemetry.c -o bin/examples/telemetry
+	$(CC) $(CFLAGS) $(API_INCLUDES) ${GTK_INCLUDES} ${API_SOURCES} examples/gtk_video.c -o bin/examples/gtk_video
 
 clean:
 	@rm -f *.o
