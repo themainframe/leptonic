@@ -156,7 +156,7 @@ void* get_frames_from_device(void* spidev_path_ptr)
  */
 int main (int argc, char** argv)
 {
-  pthread_t get_frames_thread, send_frames_to_socket_thread;
+  pthread_t get_frames_thread;
 
   // Set the log level
   log_set_level(LOG_INFO);
@@ -184,5 +184,4 @@ int main (int argc, char** argv)
   gtk_main();
 
   pthread_join(get_frames_thread, NULL);
-  pthread_join(send_frames_to_socket_thread, NULL);
 }
