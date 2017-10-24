@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <string.h>
 #include <linux/fb.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 
 /* The Lepton resolution */
@@ -105,6 +106,7 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
     struct fb_var_screeninfo v_info;
     struct fb_fix_screeninfo f_info;
     long int screen_size = 0;
+    long int line_length = 0;
     int fb_fd;
     char *fb_ptr;
 
@@ -112,37 +114,50 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
     fb_fd = open(fb_dev_path, O_RDWR);
     if (!fb_fd) {
       log_error("cannot open framebuffer device.");
-      return(1);
+      return NULL;
     }
 
     // Get fixed screen information
     if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &f_info)) {
       log_error("cannot read fb fixed information.");
+      return NULL;
     }
-
     // Get variable screen information
     if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &v_info)) {
       log_error("cannot read fb variable information.");
+      return NULL;
     }
 
     // Change variable info
-    v_info.bits_per_pixel = 16;
+    v_info.bits_per_pixel = 24;
     v_info.xres = LEP_WIDTH;
     v_info.yres = LEP_HEIGHT;
+    v_info.grayscale = 1;
     if (ioctl(fb_fd, FBIOPUT_VSCREENINFO, &v_info)) {
       log_error("cannot write fb variable information.");
+      return NULL;
     }
 
     // Get variable screen information
     if (ioctl(fb_fd, FBIOGET_VSCREENINFO, &v_info)) {
       log_error("cannot re-read fb variable information.");
+      return NULL;
     }
-
-    // Print FB details
-    log_info("Framebuffer: %dx%d, %d bpp\n", v_info.xres, v_info.yres, v_info.bits_per_pixel);
+    // Get fixed screen information
+    if (ioctl(fb_fd, FBIOGET_FSCREENINFO, &f_info)) {
+      log_error("cannot re-read fb fixed information.");
+      return NULL;
+    }
 
     // Capture linear display size
     screen_size = f_info.smem_len;
+    line_length = f_info.line_length;
+
+    // Print FB details
+    log_info(
+      "framebuffer spec: %dx%d, %d bpp, lsize: %d, llen: %d",
+      v_info.xres, v_info.yres, v_info.bits_per_pixel, screen_size, line_length
+    );
 
     // Mmap the framebuffer
     fb_ptr = (char*)mmap(0, screen_size, PROT_READ | PROT_WRITE, MAP_SHARED, fb_fd, 0);
@@ -165,21 +180,37 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
       // Copy the next frame out ready to transmit
       memcpy(&next_frame, frame_buf[reader], sizeof(vospi_frame_t));
 
-      // Move the reader ahead
-      reader = (reader + 1) & (FRAME_BUF_SIZE - 1);
-
       // Unlock data structure
       pthread_mutex_unlock(&lock);
 
-      // Perform autoscaling of values and produce a maximum and minimum, as well as the bitmap
-      uint16_t offset = 0;
+      // Move the reader ahead
+      reader = (reader + 1) & (FRAME_BUF_SIZE - 1);
 
       // Draw the frame to the fb
-      for (uint8_t seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
-        for (uint8_t pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
-            memcpy(fb_ptr + offset, next_frame.segments[seg].packets[pkt].symbols, VOSPI_PACKET_SYMBOLS);
-            offset += VOSPI_PACKET_SYMBOLS;
-        }
+      for (int l = 0; l < LEP_HEIGHT; l ++) {
+
+        // Packet numbers obtained by l*2;
+        // Segment numbers obtained by l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL
+
+        // printf("Draw line %d (%d) ", l, line_length * l);
+        // printf("segment %d ", l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL);
+        // printf("o.packets %d & %d ", l*2, l*2+1);
+        // printf("i.packets %d & %d \n", (l*2) % VOSPI_PACKETS_PER_SEGMENT_NORMAL, (l*2+1) % VOSPI_PACKETS_PER_SEGMENT_NORMAL);
+
+        // Copy both packets into place
+        memcpy(
+          fb_ptr + (line_length * l),
+          &(next_frame.segments[l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL].packets[(l*2) % VOSPI_PACKETS_PER_SEGMENT_NORMAL].symbols),
+          VOSPI_PACKET_SYMBOLS
+        );
+
+        memcpy(
+          fb_ptr + (line_length * l) + VOSPI_PACKET_SYMBOLS,
+          &(next_frame.segments[l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL].packets[(l*2 + 1) % VOSPI_PACKETS_PER_SEGMENT_NORMAL].symbols),
+          VOSPI_PACKET_SYMBOLS
+        );
+
+
       }
 
     }
