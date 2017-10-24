@@ -129,10 +129,9 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
     }
 
     // Change variable info
-    v_info.bits_per_pixel = 24;
+    v_info.bits_per_pixel = 16;
     v_info.xres = LEP_WIDTH;
     v_info.yres = LEP_HEIGHT;
-    v_info.grayscale = 1;
     if (ioctl(fb_fd, FBIOPUT_VSCREENINFO, &v_info)) {
       log_error("cannot write fb variable information.");
       return NULL;
@@ -186,33 +185,42 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
       // Move the reader ahead
       reader = (reader + 1) & (FRAME_BUF_SIZE - 1);
 
-      // Draw the frame to the fb
-      for (int l = 0; l < LEP_HEIGHT; l ++) {
+      // Produce a linear list of pixel values
+      uint16_t pix_values[LEP_HEIGHT * LEP_WIDTH];
+      uint16_t offset = 0, max = UINT16_MAX, min = 0;
+      for (uint8_t seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
+        for (uint8_t pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
+          for (uint8_t sym = 0; sym < VOSPI_PACKET_SYMBOLS; sym += 2) {
+            pix_values[offset] = next_frame.segments[seg].packets[pkt].symbols[sym] << 8 |
+              next_frame.segments[seg].packets[pkt].symbols[sym + 1];
 
-        // Packet numbers obtained by l*2;
-        // Segment numbers obtained by l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL
+            if (pix_values[offset] > max) {
+              max = pix_values[offset];
+            }
 
-        // printf("Draw line %d (%d) ", l, line_length * l);
-        // printf("segment %d ", l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL);
-        // printf("o.packets %d & %d ", l*2, l*2+1);
-        // printf("i.packets %d & %d \n", (l*2) % VOSPI_PACKETS_PER_SEGMENT_NORMAL, (l*2+1) % VOSPI_PACKETS_PER_SEGMENT_NORMAL);
+            if (pix_values[offset] < min) {
+              min = pix_values[offset];
+            }
 
-        // Copy both packets into place
-        memcpy(
-          fb_ptr + (line_length * l),
-          &(next_frame.segments[l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL].packets[(l*2) % VOSPI_PACKETS_PER_SEGMENT_NORMAL].symbols),
-          VOSPI_PACKET_SYMBOLS
-        );
-
-        memcpy(
-          fb_ptr + (line_length * l) + VOSPI_PACKET_SYMBOLS,
-          &(next_frame.segments[l*2/VOSPI_PACKETS_PER_SEGMENT_NORMAL].packets[(l*2 + 1) % VOSPI_PACKETS_PER_SEGMENT_NORMAL].symbols),
-          VOSPI_PACKET_SYMBOLS
-        );
-
-
+            offset ++;
+          }
+        }
       }
 
+      printf("FirstStage: Max: %d, Min: %d\n", max, min);
+
+      // Produce a linear list of RGB values
+      uint8_t rgb_values[LEP_HEIGHT * LEP_WIDTH * 3];
+
+      // Draw the frame to the fb
+      for (int line = 0; line < LEP_HEIGHT; line ++) {
+          memcpy(
+            fb_ptr + (line_length * line),
+            pix_values + (LEP_WIDTH * line * 2),
+            LEP_WIDTH * 2
+          );
+      }
+      exit(0);
     }
 
     munmap(fb_ptr, screen_size);
