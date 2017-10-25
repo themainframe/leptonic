@@ -129,7 +129,7 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
     }
 
     // Change variable info
-    v_info.bits_per_pixel = 16;
+    v_info.bits_per_pixel = 24;
     v_info.xres = LEP_WIDTH;
     v_info.yres = LEP_HEIGHT;
     if (ioctl(fb_fd, FBIOPUT_VSCREENINFO, &v_info)) {
@@ -187,7 +187,7 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
 
       // Produce a linear list of pixel values
       uint16_t pix_values[LEP_HEIGHT * LEP_WIDTH];
-      uint16_t offset = 0, max = UINT16_MAX, min = 0;
+      uint16_t offset = 0, max = 0, min = UINT16_MAX;
       for (uint8_t seg = 0; seg < VOSPI_SEGMENTS_PER_FRAME; seg ++) {
         for (uint8_t pkt = 0; pkt < VOSPI_PACKETS_PER_SEGMENT_NORMAL; pkt ++) {
           for (uint8_t sym = 0; sym < VOSPI_PACKET_SYMBOLS; sym += 2) {
@@ -207,20 +207,29 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
         }
       }
 
-      printf("FirstStage: Max: %d, Min: %d\n", max, min);
+      uint16_t range = max - min;
 
-      // Produce a linear list of RGB values
-      uint8_t rgb_values[LEP_HEIGHT * LEP_WIDTH * 3];
+      // Scale the values appropriately
+      for (uint16_t index = 0; index < LEP_HEIGHT * LEP_WIDTH; index ++) {
+        pix_values[index] = (uint16_t)(((double)pix_values[index] - min) / range * 254.0);
+      }
+
+      // Make sure our thread doesn't advance too fast to avoid blocking waiting for frames
+      usleep(1000);
 
       // Draw the frame to the fb
+      uint16_t fb_offset = 0;
       for (int line = 0; line < LEP_HEIGHT; line ++) {
-          memcpy(
-            fb_ptr + (line_length * line),
-            pix_values + (LEP_WIDTH * line * 2),
-            LEP_WIDTH * 2
-          );
+        for(int col = 0; col < LEP_WIDTH; col ++) {
+          fb_ptr[line_length * line + (col * 3)] = pix_values[fb_offset];
+          fb_ptr[line_length * line + (col * 3) + 1] = pix_values[fb_offset];
+          fb_ptr[line_length * line + (col * 3) + 2] = pix_values[fb_offset];
+          fb_offset ++;
+        }
       }
-      exit(0);
+
+      // usleep(1000);
+
     }
 
     munmap(fb_ptr, screen_size);
