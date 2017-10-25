@@ -1,5 +1,6 @@
 #include "log.h"
 #include "vospi.h"
+#include "falsecolour.h"
 #include <stdio.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -16,6 +17,9 @@
 /* The Lepton resolution */
 #define LEP_WIDTH 160
 #define LEP_HEIGHT 120
+
+/* Faux-AGC parameters */
+#define MIN_AGC_RANGE 200
 
 // The size of the circular frame buffer
 #define FRAME_BUF_SIZE 8
@@ -209,6 +213,11 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
 
       uint16_t range = max - min;
 
+      // Minimum range
+      if (range < MIN_AGC_RANGE) {
+        range = MIN_AGC_RANGE;
+      }
+
       // Scale the values appropriately
       for (uint16_t index = 0; index < LEP_HEIGHT * LEP_WIDTH; index ++) {
         pix_values[index] = (uint16_t)(((double)pix_values[index] - min) / range * 254.0);
@@ -221,15 +230,12 @@ void* draw_frames_to_fb(void* fb_dev_path_ptr)
       uint16_t fb_offset = 0;
       for (int line = 0; line < LEP_HEIGHT; line ++) {
         for(int col = 0; col < LEP_WIDTH; col ++) {
-          fb_ptr[line_length * line + (col * 3)] = pix_values[fb_offset];
-          fb_ptr[line_length * line + (col * 3) + 1] = pix_values[fb_offset];
-          fb_ptr[line_length * line + (col * 3) + 2] = pix_values[fb_offset];
+          fb_ptr[line_length * line + (col * 3)] = fc_map[pix_values[fb_offset]][2];
+          fb_ptr[line_length * line + (col * 3) + 1] = fc_map[pix_values[fb_offset]][1];
+          fb_ptr[line_length * line + (col * 3) + 2] = fc_map[pix_values[fb_offset]][0];
           fb_offset ++;
         }
       }
-
-      // usleep(1000);
-
     }
 
     munmap(fb_ptr, screen_size);
