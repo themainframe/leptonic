@@ -9,3 +9,4 @@ leptonic
 .idea
 node_modules
 run.sh
+.vscode/settings.json
