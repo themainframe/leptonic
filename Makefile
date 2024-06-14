@@ -1,7 +1,7 @@
 .PHONY: examples clean
 
 # Headers
-API_INCLUDES = -Iinclude/api
+API_INCLUDES = -I include/api
 
 # Sources
 API_SOURCES = $(wildcard src/api/*.c)
@@ -10,7 +10,7 @@ CC = gcc
 CFLAGS = -g -DLOG_USE_COLOR=1 -Wall
 
 main:
-	$(CC) $(CFLAGS) -pthread -lzmq $(API_INCLUDES) ${API_SOURCES} src/leptonic.c -o bin/leptonic
+	$(CC) $(CFLAGS) -pthread  $(API_INCLUDES) ${API_SOURCES} src/leptonic.c -lzmq -o bin/leptonic
 
 examples:
 	@mkdir -p bin/examples/
@@ -21,4 +21,4 @@ examples:
 
 clean:
 	@rm -f *.o
-	@rm leptonic
+	@rm bin/leptonic
